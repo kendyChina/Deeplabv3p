@@ -1,11 +1,28 @@
 import torch
 from torch import nn
 from torch.nn import functional as F
+from Backbone.xception import Xception as xception_backbone
+from model_libs import SeperateConv
 
-def xception(x):
-    data = None
-    decode_shortcut = None
-    return data, decode_shortcut
+
+def xception(output_stride=16):
+    backbone = 65
+    if backbone == 65:
+        decode_point = 2
+        end_points = 21
+    elif backbone == 41:
+        decode_point = 2
+        end_points = 13
+    elif backbone == 71:
+        decode_point = 3
+        end_points = 23
+    model = xception_backbone(backbone=backbone, output_stride=output_stride,
+                              decode_point=decode_point, end_points=end_points)
+    return model
+    # return xception_backbone()
+    # data = None
+    # decode_shortcut = None
+    # return data, decode_shortcut
 
 def mobilenetv2(x):
     conv1 = nn.Conv2d(3, 128, kernel_size=1, stride=32)
@@ -14,21 +31,7 @@ def mobilenetv2(x):
     decode_shortcut = conv2(x)
     return data, decode_shortcut
 
-class SeperateConv(nn.Sequential):
-    def __init__(self, in_channels, out_channels, kernel_size,
-                 dilation=1):
-        super(SeperateConv, self).__init__(
-            nn.Conv2d(in_channels, in_channels, kernel_size,
-                      groups=in_channels, bias=False,
-                      padding=(kernel_size // 2) * dilation,
-                      dilation=dilation),
-            nn.BatchNorm2d(in_channels),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(in_channels, out_channels, kernel_size=1,
-                      groups=1, bias=False, dilation=1, padding=0),
-            nn.BatchNorm2d(out_channels),
-            nn.ReLU(inplace=True),
-        )
+
 
 class ASPP1x1(nn.Sequential):
     def __init__(self, in_channels, out_channels):
@@ -151,7 +154,7 @@ class Deeplabv3p(nn.Module):
                  backbone="mobilenet", seperate_conv=False):
         super(Deeplabv3p, self).__init__()
         if backbone == "xception":
-            self.backbone = xception
+            self.backbone = xception(output_stride)
         elif "mobilenet" in backbone:
             self.backbone = mobilenetv2
         else:
@@ -170,6 +173,5 @@ class Deeplabv3p(nn.Module):
         res = F.interpolate(res, x.shape[-2:], mode="bilinear", align_corners=False)
         return res
 
-
-if __name__ == '__main__':
-    pass
+if __name__ == "__main__":
+    xception(16)
